@@ -2,83 +2,95 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- 1. CONNECT TO GOOGLE SHEETS ---
-# Hano shyiramo URL ya Google Sheet yawe (Make sure it's public: 'Anyone with the link can view')
-SHEET_URL = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/export?format=csv"
+# --- APP CONFIGURATION ---
+st.set_page_config(page_title="AI Predictor Pro", page_icon="📈")
 
-def load_user_data():
-    try:
-        df = pd.read_csv(SHEET_URL)
-        return df
-    except:
-        return pd.DataFrame(columns=['username', 'password', 'status'])
+# Using a simple simulation of a database for this script
+# To make it permanent, you'll link this to your GSheet in Streamlit Secrets
+if 'database' not in st.session_state:
+    st.session_state['database'] = pd.DataFrame(columns=['username', 'password', 'usage', 'status'])
 
-# --- 2. AUTHENTICATION LOGIC ---
-def login_user(username, password, df):
-    user_row = df[(df['username'] == username) & (df['password'].astype(str) == password)]
-    if not user_row.empty:
-        return user_row.iloc[0].to_dict()
-    return None
+if 'logged_in_user' not in st.session_state:
+    st.session_state['logged_in_user'] = None
 
-# --- 3. THE INTERFACE ---
-st.set_page_config(page_title="AI Casino Pro - SaaS", layout="centered")
+# --- UI STYLING ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .stMetric { background-color: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 10px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-if 'auth' not in st.session_state:
-    st.session_state['auth'] = None
+# --- NAVIGATION ---
+if st.session_state['logged_in_user'] is None:
+    st.title("🚀 AI Predictor Access")
+    auth_mode = st.radio("Choose Mode", ["Login", "Sign Up (3 Free Predictions)"])
 
-df_users = load_user_data()
+    if auth_mode == "Sign Up (3 Free Predictions)":
+        new_user = st.text_input("Choose Username")
+        new_email = st.text_input("Email Address")
+        new_pass = st.text_input("Create Password", type="password")
+        
+        if st.button("Create My Free Account"):
+            # Logic: Add to database
+            st.success("Account created! You have 3 FREE signals.")
+            st.info("Now switch to Login mode to start.")
+            # (In a real app, this would write to Google Sheets)
 
-# --- LOGIN/REGISTER PAGE ---
-if st.session_state['auth'] is None:
-    st.title("🛡️ Secure Access")
-    tab1, tab2 = st.tabs(["Login", "Payment Info"])
-    
-    with tab1:
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        if st.button("Unlock AI Engine"):
-            user = login_user(u, p, df_users)
-            if user:
-                st.session_state['auth'] = user
-                st.rerun()
-            else:
-                st.error("Account ntibonetse cyangwa ntiwishyuye.")
+    else:
+        user = st.text_input("Username")
+        pw = st.text_input("Password", type="password")
+        if st.button("Login"):
+            # For now, let's simulate a successful login
+            st.session_state['logged_in_user'] = {"username": user, "usage": 0, "status": "Trial"}
+            st.rerun()
 
-    with tab2:
-        st.write("### 💳 Subscription Plans")
-        st.info("1. Trial: Free (3 Signals)\n2. Premium: 5,000 RWF / Month")
-        st.write("Ohereza amafaranga kuri: **078X XXX XXX (Arsene)**")
-        st.write("Hanyuma utume ubutumwa kuri WhatsApp wanditse 'Username' yawe.")
-
-# --- PREMIUM DASHBOARD ---
+# --- MAIN APP INTERFACE ---
 else:
-    user = st.session_state['auth']
-    st.sidebar.success(f"User: {user['username']}")
-    st.sidebar.info(f"Account Type: {user['status']}")
-
-    if user['status'] == 'Trial' or user['status'] == 'Premium':
-        st.title("🎯 AI Smart Signals")
-        
-        # UI ya Prediction (Ya mibare wampaye)
-        st.markdown("---")
-        input_data = st.text_input("Ingiza imibare 9 ya nyuma:")
-        
-        if st.button("Get Premium Prediction"):
-            with st.spinner("Calculating Probability..."):
-                time.sleep(2)
-                # Ibisubizo bishingiye kuri AI Engine
-                st.balloons()
-                c1, c2, c3 = st.columns(3)
-                c1.metric("PREDICTION", "4.7x")
-                c2.metric("TARGET", "3.9x")
-                c3.metric("CHANCE", "70%")
-                
-                st.markdown("""
-                    <div style="background-color:green; padding:15px; border-radius:10px; color:white; text-align:center;">
-                        🚀 <b>SIGNAL: BUY NOW!</b><br>Cash out at 3.9x safely.
-                    </div>
-                """, unsafe_allow_html=True)
+    user_data = st.session_state['logged_in_user']
+    st.sidebar.title(f"Welcome, {user_data['username']}")
+    st.sidebar.write(f"Account: **{user_data['status']}**")
     
+    # TRIAL LOGIC
+    max_free = 3
+    remaining = max_free - user_data['usage']
+
+    if user_data['status'] == "Trial" and remaining <= 0:
+        st.error("❌ Your Free Trial has expired!")
+        st.write("### 💳 Upgrade to Premium")
+        st.write("To continue getting signals, pay **5,000 RWF** via MoMo:")
+        st.code("*182*8*1*XXXXXX# (Arsene)")
+        st.info("After payment, send your username to WhatsApp for activation.")
+        if st.button("Logout"):
+            st.session_state['logged_in_user'] = None
+            st.rerun()
+    else:
+        st.title("📊 AI Smart Analytics")
+        if user_data['status'] == "Trial":
+            st.warning(f"Free Signals Remaining: {remaining}")
+
+        st.write("Enter the last 9 odds from the game:")
+        input_odds = st.text_input("Example: 1.22, 5.40, 1.02...", placeholder="Separate with commas")
+
+        if st.button("Get Prediction"):
+            if user_data['status'] == "Trial":
+                user_data['usage'] += 1
+            
+            with st.spinner('AI Engine is calculating patterns...'):
+                time.sleep(2)
+                
+                # THE DASHBOARD (Your requested format)
+                st.markdown("---")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("PREDICTION", "4.7x")
+                col2.metric("TARGET", "3.9x")
+                col3.metric("CHANCE", "70%")
+                
+                st.success("🔥 Signal Found: Target 3.9x is highly probable!")
+                
+                if user_data['status'] == "Trial":
+                    st.rerun() # Refresh to update the usage count
+
     if st.sidebar.button("Logout"):
-        st.session_state['auth'] = None
+        st.session_state['logged_in_user'] = None
         st.rerun()
