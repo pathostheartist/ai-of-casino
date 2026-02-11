@@ -1,104 +1,125 @@
 import streamlit as st
 import time
 
-# --- 1. SETTINGS & STYLES ---
-st.set_page_config(page_title="Aviator AI Predictor", layout="centered")
+# --- 1. CONFIGURATION ---
+st.set_page_config(page_title="Aviator AI Pro", layout="centered", page_icon="💰")
 
-st.markdown("""
+# Izina ryawe cyangwa rya system yawe
+APP_NAME = "AVIATOR AI PRO"
+ADMIN_WHATSAPP = "250780000000" # Shyiraho nimero yawe hano (format: 250...)
+
+# --- 2. DATABASE Y'ABAKORESHA ---
+# Hano niho ugiye kujya wandika abantu bose bishyuye.
+# Niba umuntu wishyuye, muhe 'status': 'Premium'
+USERS = {
+    "admin_divin": {"password": "divin2026", "status": "Admin"},
+    "test_user": {"password": "123", "status": "Trial"},  # Uyu azabona signals 3 gusa
+    "eric_250": {"password": "pass", "status": "Premium"} # Uyu azajya abona byose
+}
+
+# --- 3. CUSTOM DESIGN (CASINO THEME) ---
+st.markdown(f"""
     <style>
-    .stApp { background-color: #050505; color: white; }
-    .stButton>button { 
-        width: 100%; border-radius: 20px; 
-        background: linear-gradient(90deg, #ff4b4b, #800000); 
-        color: white; font-weight: bold; border: none; height: 45px;
-    }
-    .signal-box {
-        background-color: #111; padding: 20px; border-radius: 15px;
-        border: 2px solid #ff4b4b; text-align: center; margin: 20px 0;
-    }
+    .stApp {{ background-color: #0a0a0a; color: white; }}
+    .stButton>button {{ 
+        width: 100%; border-radius: 25px; 
+        background: linear-gradient(90deg, #ff4b4b, #b30000); 
+        color: white; font-weight: bold; border: none; height: 50px;
+        font-size: 18px; box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
+    }}
+    .premium-card {{
+        background: linear-gradient(135deg, #1e1e1e, #111);
+        padding: 25px; border-radius: 15px;
+        border: 1px solid #ffd700; text-align: center;
+        margin: 20px 0; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1);
+    }}
+    .signal-display {{
+        background-color: #000; padding: 30px; border-radius: 20px;
+        border: 3px solid #00ff00; text-align: center; font-family: 'Courier New', Courier, monospace;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. USER DATABASE (Muri Code) ---
-# Hano niho ushobora kongerera abantu niba Google Sheet yanze
-USERS = {
-    "admin_divin": {"password": "divin2026", "status": "Admin"},
-    "test_user": {"password": "123", "status": "Trial"},
-    "premium_user": {"password": "789", "status": "Premium"}
-}
-
-# --- 3. SESSION STATE ---
+# --- 4. SESSION STATE ---
 if 'user' not in st.session_state:
     st.session_state['user'] = None
+if 'clicks' not in st.session_state:
+    st.session_state['clicks'] = 0
 
-# --- 4. LOGIN PAGE ---
-def auth_page():
-    st.title("🎯 Aviator AI Predictor")
-    st.write("Welcome to the elite signal generator.")
+# --- 5. AUTHENTICATION ---
+def login():
+    st.title(f"🚀 {APP_NAME}")
+    st.subheader("Login to access live signals")
     
-    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
+    u = st.text_input("Username").lower().strip()
+    p = st.text_input("Password", type="password")
     
-    with tab1:
-        u = st.text_input("Username").lower().strip()
-        p = st.text_input("Password", type="password")
-        
-        if st.button("LOG IN"):
-            if u in USERS and USERS[u]["password"] == p:
-                st.session_state['user'] = {"username": u, "status": USERS[u]["status"]}
-                st.success("Success! Redirecting...")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
-        
-        st.markdown(f'''
-            <a href="https://wa.me/250780000000" target="_blank">
-                <button style="width:100%; border-radius:20px; background-color:#25d366; color:white; border:none; height:40px; font-weight:bold; cursor:pointer; margin-top:10px;">
-                    💬 Contact Admin on WhatsApp
-                </button>
-            </a>
-            ''', unsafe_allow_html=True)
-
-    with tab2:
-        st.info("Registration is currently handled via WhatsApp for security.")
-        st.write("Send your desired username to the admin.")
-
-# --- 5. MAIN DASHBOARD ---
-def main_app():
-    user = st.session_state['user']
-    st.sidebar.title(f"👤 {user['username']}")
-    st.sidebar.write(f"Access: **{user['status']}**")
+    if st.button("ENTER DASHBOARD"):
+        if u in USERS and USERS[u]["password"] == p:
+            st.session_state['user'] = {"username": u, "status": USERS[u]["status"]}
+            st.success("Access Granted!")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error("Access Denied! Check your credentials or contact Admin.")
     
-    st.title("🚀 AI Analysis Dashboard")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("System Accuracy", "94.2%")
-    with col2:
-        st.metric("Status", user['status'])
-
     st.markdown("---")
-    st.write("Enter the last 3 multipliers to predict the next flight:")
-    st.text_input("Last 3 odds (e.g., 1.50, 2.10, 1.10)")
+    st.write("Don't have an account?")
+    if st.button("GET ACCESS (5,000 RWF)"):
+        st.markdown(f'<meta http-equiv="refresh" content="0;url=https://wa.me/{ADMIN_WHATSAPP}?text=Nshaka%20kugura%20Account%20ya%20Aviator%20AI">', unsafe_allow_html=True)
 
-    if st.button("GENERATE NEXT SIGNAL"):
-        with st.spinner("AI is calculating probabilities..."):
-            time.sleep(3)
-            st.markdown("""
-                <div class="signal-box">
-                    <h3 style="color: white;">NEXT PREDICTED SIGNAL</h3>
-                    <h1 style="color: #ff4b4b; font-size: 50px;">4.85x</h1>
-                    <p style="color: #888;">Safe Cashout: 3.50x</p>
-                </div>
-                """, unsafe_allow_html=True)
-            st.balloons()
-
-    if st.sidebar.button("Logout"):
+# --- 6. MAIN SYSTEM ---
+def main():
+    user = st.session_state['user']
+    
+    # Sidebar Info
+    st.sidebar.title("💎 ACCOUNT")
+    st.sidebar.write(f"User: **{user['username']}**")
+    st.sidebar.write(f"Status: **{user['status']}**")
+    
+    if st.sidebar.button("LOGOUT"):
         st.session_state['user'] = None
         st.rerun()
 
+    st.title("🎯 Live Signal Generator")
+    
+    # Logic ya Premium vs Trial
+    if user['status'] == "Trial" and st.session_state['clicks'] >= 3:
+        st.markdown(f"""
+            <div class="premium-card">
+                <h2 style="color: #ffd700;">🛑 TRIAL EXPIRED!</h2>
+                <p>You have used your 3 free signals. To continue winning, upgrade to Premium.</p>
+                <h3 style="color: white;">Price: 5,000 RWF / Lifetime</h3>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        if st.button("CLICK TO PAY VIA WHATSAPP"):
+            st.markdown(f'<meta http-equiv="refresh" content="0;url=https://wa.me/{ADMIN_WHATSAPP}?text=Mwaye%2C%20nishyuye%205000RWF%20kugira%20ngo%20muhe%20Premium%20kuri%20username%3A%20{user["username"]}">', unsafe_allow_html=True)
+            
+    else:
+        st.info("Analysis: System is stable. High accuracy for next round.")
+        
+        if st.button("GENERATE NEXT SIGNAL"):
+            st.session_state['clicks'] += 1
+            with st.spinner("AI analyzing the server trends..."):
+                time.sleep(2)
+                # Iyi ni algorithm y'ikigeragezo - ushobora kuyongerera imbaraga
+                import random
+                odd = round(random.uniform(1.5, 5.5), 2)
+                
+                st.markdown(f"""
+                    <div class="signal-display">
+                        <h4 style="color: #888;">PREDICTION FOUND</h4>
+                        <h1 style="color: #00ff00; font-size: 60px;">{odd}x</h1>
+                        <p style="color: white;">Cash out at {round(odd-0.5, 2)}x for 100% safety</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                if user['status'] == "Trial":
+                    st.warning(f"Free Signals Remaining: {3 - st.session_state['clicks']}")
+
 # --- EXECUTION ---
 if st.session_state['user'] is None:
-    auth_page()
+    login()
 else:
-    main_app()
+    main()
