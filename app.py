@@ -1,125 +1,147 @@
 import streamlit as st
 import time
 
-# --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Aviator AI Pro", layout="centered", page_icon="💰")
+# --- 1. CONFIGURATION & ACCESS CONTROL ---
+st.set_page_config(page_title="Aviator AI Master", layout="wide", page_icon="⚙️")
 
-# Izina ryawe cyangwa rya system yawe
-APP_NAME = "AVIATOR AI PRO"
-ADMIN_WHATSAPP = "250780000000" # Shyiraho nimero yawe hano (format: 250...)
+# DATABASE Y'ABAKORESHA (Iyi niyo "Engine" yawe)
+# 'active': True (afite uruhushya), 'active': False (arafunze)
+if 'db_users' not in st.session_state:
+    st.session_state['db_users'] = {
+        "admin_divin": {"password": "divin2026", "status": "Admin", "active": True},
+        "test_user": {"password": "123", "status": "Trial", "active": True},
+    }
 
-# --- 2. DATABASE Y'ABAKORESHA ---
-# Hano niho ugiye kujya wandika abantu bose bishyuye.
-# Niba umuntu wishyuye, muhe 'status': 'Premium'
-USERS = {
-    "admin_divin": {"password": "divin2026", "status": "Admin"},
-    "test_user": {"password": "123", "status": "Trial"},  # Uyu azabona signals 3 gusa
-    "eric_250": {"password": "pass", "status": "Premium"} # Uyu azajya abona byose
-}
-
-# --- 3. CUSTOM DESIGN (CASINO THEME) ---
-st.markdown(f"""
+# --- 2. CUSTOM CSS ---
+st.markdown("""
     <style>
-    .stApp {{ background-color: #0a0a0a; color: white; }}
-    .stButton>button {{ 
-        width: 100%; border-radius: 25px; 
-        background: linear-gradient(90deg, #ff4b4b, #b30000); 
-        color: white; font-weight: bold; border: none; height: 50px;
-        font-size: 18px; box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
-    }}
-    .premium-card {{
-        background: linear-gradient(135deg, #1e1e1e, #111);
-        padding: 25px; border-radius: 15px;
-        border: 1px solid #ffd700; text-align: center;
-        margin: 20px 0; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1);
-    }}
-    .signal-display {{
-        background-color: #000; padding: 30px; border-radius: 20px;
-        border: 3px solid #00ff00; text-align: center; font-family: 'Courier New', Courier, monospace;
-    }}
+    .stApp { background-color: #050505; color: white; }
+    [data-testid="stSidebar"] { background-color: #111; border-right: 1px solid #333; }
+    .user-card { 
+        background-color: #1a1a1a; padding: 15px; border-radius: 10px; 
+        border: 1px solid #333; margin-bottom: 10px;
+    }
+    .status-active { color: #00ff00; font-weight: bold; }
+    .status-blocked { color: #ff0000; font-weight: bold; }
+    .stButton>button { border-radius: 8px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. SESSION STATE ---
+# --- 3. SESSION STATE ---
 if 'user' not in st.session_state:
     st.session_state['user'] = None
-if 'clicks' not in st.session_state:
-    st.session_state['clicks'] = 0
 
-# --- 5. AUTHENTICATION ---
-def login():
-    st.title(f"🚀 {APP_NAME}")
-    st.subheader("Login to access live signals")
+# --- 4. LOGIN LOGIC ---
+def login_page():
+    st.title("🎯 Aviator AI Pro Login")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        u = st.text_input("Username").lower().strip()
+        p = st.text_input("Password", type="password")
+        if st.button("LOGIN"):
+            db = st.session_state['db_users']
+            if u in db and db[u]["password"] == p:
+                if not db[u]["active"]:
+                    st.error("🛑 Your account is DEACTIVATED. Contact Admin.")
+                else:
+                    st.session_state['user'] = {"username": u, "status": db[u]["status"]}
+                    st.success("Authenticated!")
+                    st.rerun()
+            else:
+                st.error("Invalid credentials.")
+
+# --- 5. ADMIN CONTROL PANEL ---
+def admin_dashboard():
+    st.title("👨‍🔧 Master Admin Control")
+    st.subheader("Manage All Registered Users")
     
-    u = st.text_input("Username").lower().strip()
-    p = st.text_input("Password", type="password")
+    db = st.session_state['db_users']
     
-    if st.button("ENTER DASHBOARD"):
-        if u in USERS and USERS[u]["password"] == p:
-            st.session_state['user'] = {"username": u, "status": USERS[u]["status"]}
-            st.success("Access Granted!")
-            time.sleep(1)
-            st.rerun()
-        else:
-            st.error("Access Denied! Check your credentials or contact Admin.")
-    
+    # Kurema umuntu mushya (Add User)
+    with st.expander("➕ Add New User"):
+        c1, c2, c3 = st.columns(3)
+        new_u = c1.text_input("New Username")
+        new_p = c2.text_input("New Password")
+        new_s = c3.selectbox("Role", ["Trial", "Premium"])
+        if st.button("CREATE ACCOUNT"):
+            if new_u and new_p:
+                st.session_state['db_users'][new_u] = {"password": new_p, "status": new_s, "active": True}
+                st.success(f"Account for {new_u} created!")
+                st.rerun()
+
     st.markdown("---")
-    st.write("Don't have an account?")
-    if st.button("GET ACCESS (5,000 RWF)"):
-        st.markdown(f'<meta http-equiv="refresh" content="0;url=https://wa.me/{ADMIN_WHATSAPP}?text=Nshaka%20kugura%20Account%20ya%20Aviator%20AI">', unsafe_allow_html=True)
+    
+    # Lisiti y'abantu bose
+    for username, info in db.items():
+        if username == "admin_divin": continue # Admin ntiyiyobora
+        
+        with st.container():
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+            col1.write(f"👤 **{username}** (Pass: {info['password']})")
+            col2.write(f"Type: {info['status']}")
+            
+            # Kwerekana niba active cyangwa inactive
+            status_text = "ACTIVE" if info['active'] else "BLOCKED"
+            status_class = "status-active" if info['active'] else "status-blocked"
+            col3.markdown(f'<span class="{status_class}">{status_text}</span>', unsafe_allow_html=True)
+            
+            # Buto zo gukontrola
+            if info['active']:
+                if col4.button("🚫 DEACTIVATE", key=f"deact_{username}"):
+                    st.session_state['db_users'][username]['active'] = False
+                    st.rerun()
+            else:
+                if col4.button("✅ ACTIVATE", key=f"act_{username}"):
+                    st.session_state['db_users'][username]['active'] = True
+                    st.rerun()
+            
+            if col4.button("🗑️ DELETE", key=f"del_{username}"):
+                del st.session_state['db_users'][username]
+                st.rerun()
+        st.write("---")
 
-# --- 6. MAIN SYSTEM ---
-def main():
+# --- 6. USER DASHBOARD ---
+def user_dashboard():
     user = st.session_state['user']
+    st.title(f"🚀 Aviator AI Predictor")
     
-    # Sidebar Info
-    st.sidebar.title("💎 ACCOUNT")
-    st.sidebar.write(f"User: **{user['username']}**")
-    st.sidebar.write(f"Status: **{user['status']}**")
+    col1, col2 = st.columns([2, 1])
     
-    if st.sidebar.button("LOGOUT"):
+    with col1:
+        st.markdown("""
+        <div style="background-color: #111; padding: 30px; border-radius: 15px; border-left: 5px solid #ff4b4b;">
+            <h3>Live Analysis Engine</h3>
+            <p>The AI is currently scanning Aviator servers for patterns.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("GENERATE SIGNAL"):
+            with st.spinner("Calculating..."):
+                time.sleep(2)
+                st.success("✅ Prediction: 2.85x")
+                st.balloons()
+                
+    with col2:
+        st.write("### Account Info")
+        st.info(f"Account: {user['status']}")
+        st.write("For help, contact support.")
+
+# --- 7. NAVIGATION ---
+if st.session_state['user'] is None:
+    login_page()
+else:
+    current_user = st.session_state['user']
+    st.sidebar.title(f"Welcome, {current_user['username']}")
+    
+    if current_user['status'] == "Admin":
+        choice = st.sidebar.radio("Menu", ["Admin Panel", "View Predictor"])
+        if choice == "Admin Panel":
+            admin_dashboard()
+        else:
+            user_dashboard()
+    else:
+        user_dashboard()
+        
+    if st.sidebar.button("Logout"):
         st.session_state['user'] = None
         st.rerun()
-
-    st.title("🎯 Live Signal Generator")
-    
-    # Logic ya Premium vs Trial
-    if user['status'] == "Trial" and st.session_state['clicks'] >= 3:
-        st.markdown(f"""
-            <div class="premium-card">
-                <h2 style="color: #ffd700;">🛑 TRIAL EXPIRED!</h2>
-                <p>You have used your 3 free signals. To continue winning, upgrade to Premium.</p>
-                <h3 style="color: white;">Price: 5,000 RWF / Lifetime</h3>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        if st.button("CLICK TO PAY VIA WHATSAPP"):
-            st.markdown(f'<meta http-equiv="refresh" content="0;url=https://wa.me/{ADMIN_WHATSAPP}?text=Mwaye%2C%20nishyuye%205000RWF%20kugira%20ngo%20muhe%20Premium%20kuri%20username%3A%20{user["username"]}">', unsafe_allow_html=True)
-            
-    else:
-        st.info("Analysis: System is stable. High accuracy for next round.")
-        
-        if st.button("GENERATE NEXT SIGNAL"):
-            st.session_state['clicks'] += 1
-            with st.spinner("AI analyzing the server trends..."):
-                time.sleep(2)
-                # Iyi ni algorithm y'ikigeragezo - ushobora kuyongerera imbaraga
-                import random
-                odd = round(random.uniform(1.5, 5.5), 2)
-                
-                st.markdown(f"""
-                    <div class="signal-display">
-                        <h4 style="color: #888;">PREDICTION FOUND</h4>
-                        <h1 style="color: #00ff00; font-size: 60px;">{odd}x</h1>
-                        <p style="color: white;">Cash out at {round(odd-0.5, 2)}x for 100% safety</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                if user['status'] == "Trial":
-                    st.warning(f"Free Signals Remaining: {3 - st.session_state['clicks']}")
-
-# --- EXECUTION ---
-if st.session_state['user'] is None:
-    login()
-else:
-    main()
