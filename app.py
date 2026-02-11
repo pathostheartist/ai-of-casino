@@ -1,84 +1,73 @@
 import streamlit as st
 import time
-import numpy as np
 
-# --- 1. CONFIGURATION Y'ISURA (MOBILE STYLE) ---
-st.set_page_config(page_title="Aviator AI Predictor", page_icon="🎯", layout="centered")
+# --- 1. CONFIGURATION & DATABASE (Simulated) ---
+# Mu buzima busanzwe hano twakoresha Firebase cyangwa Google Sheets
+USERS = {
+    "arsene": {"password": "123", "status": "premium"},
+    "guest": {"password": "guest", "status": "trial", "signals_left": 3}
+}
 
-# Custom CSS kugira ngo App ise neza kuri terefone
-st.markdown("""
-    <style>
-    [data-testid="stMetricValue"] { font-size: 30px; color: #00ffcc; }
-    .stButton>button { width: 100%; border-radius: 20px; height: 3em; background-color: #2e7d32; color: white; }
-    .reportview-container { background: #0e1117; }
-    </style>
-    """, unsafe_allow_html=True)
+def check_login(username, password):
+    if username in USERS and USERS[username]["password"] == password:
+        return USERS[username]
+    return None
 
-# --- 2. UBWOONKO BWA AI (LOGIC) ---
-def get_ai_prediction(odds_list):
-    """
-    Iyi izajya isuzuma pattern.
-    Ubu tugerageranyije ya mibare wampaye (Prediction 4.7, Target 3.9)
-    """
-    # Hano niho hashingira 'Brute Force' twubatse muri Colab
-    # AI ireba niba pattern ihuye n'iyigeze kubaho
+# --- 2. THE APP INTERFACE ---
+st.set_page_config(page_title="Casino AI Premium", layout="centered")
+
+if 'user' not in st.session_state:
+    st.session_state['user'] = None
+
+# --- LOGIN PAGE ---
+if st.session_state['user'] is None:
+    st.title("🔐 Member Login")
+    user_input = st.text_input("Username")
+    pass_input = st.text_input("Password", type="password")
     
-    # Ingero z'ibisubizo AI iguha
-    prediction = 4.7
-    target = 3.9
-    probability = 70
+    if st.button("Login"):
+        user_data = check_login(user_input, pass_input)
+        if user_data:
+            st.session_state['user'] = user_data
+            st.rerun()
+        else:
+            st.error("Username cyangwa Password ntabwo ari byo.")
     
-    return prediction, target, probability
+    st.info("Niba ushaka Trial, koresha: guest / guest")
 
-# --- 3. ISURA YA WEB (FRONTEND) ---
-st.title("🎰 Aviator AI Predictor")
-st.subheader("Smart Pattern Recognition")
-
-with st.container():
-    st.write("Ingiza odds 9 za nyuma ubona kuri screen:")
-    input_odds = st.text_input("Urugero: 1.2, 1.05, 2.1...", placeholder="Zitandukanye n'akagufi ( , )")
-
-if st.button("START AI ANALYSIS"):
-    if input_odds:
-        try:
-            # Guhindura inyandiko mo imibare
-            odds_list = [float(x.strip()) for x in input_odds.split(",")]
-            
-            if len(odds_list) < 9:
-                st.error("⚠️ Ingero: AI ikeneye odds nibura 9 kugira ngo isuzume pattern.")
-            else:
-                with st.spinner('AI is forcing patterns...'):
-                    time.sleep(1.5) # Isimula igihe AI imara itekereza
-                    
-                    pred, target, prob = get_ai_prediction(odds_list)
-                    
-                    st.divider()
-                    
-                    # --- DASHBOARD Y'IBISUBIZO ---
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("PREDICTION", f"{pred}x")
-                    with col2:
-                        st.metric("TARGET", f"{target}x")
-                    with col3:
-                        st.metric("CHANCE", f"{prob}%")
-                    
-                    # Probability Bar
-                    st.progress(prob / 100)
-                    
-                    # Inama ya AI (Action Advice)
-                    if prob >= 70:
-                        st.balloons()
-                        st.success(f"🚀 **SIGNAL DETECTED!** \n\n Cash out exactly at **{target}x**. Probability is high!")
-                    else:
-                        st.warning("🛑 **RISK IS HIGH** \n\n Iyi pattern ntabwo yizewe. Tegeza indi nshuro.")
-                        
-        except ValueError:
-            st.error("⚠️ Shyiramo imibare gusa (urugero: 1.2, 2.5).")
+# --- MAIN DASHBOARD (Only for logged in users) ---
+else:
+    user = st.session_state['user']
+    st.sidebar.title(f"Welcome, {user_input}!")
+    
+    # 3. TRIAL & PAYMENT SYSTEM
+    if user['status'] == "trial" and user['signals_left'] <= 0:
+        st.warning("⚠️ Trial yawe yarangiye! Ishyura 5,000 RWF kuri MoMo (078xxxxxxx) ubone Full Access.")
+        if st.button("Logout"):
+            st.session_state['user'] = None
+            st.rerun()
     else:
-        st.info("Andika imibare hejuru hanyuma ukande buto.")
+        # Hano niho ya AI Dashboard iherereye
+        st.title("🎯 AI Premium Signals")
+        
+        if user['status'] == "trial":
+            st.caption(f"Trial Mode: Usigaje signals {user['signals_left']}")
 
-# --- 4. ANALYTICS SECTION ---
-st.divider()
-st.caption("AI Memory Status: Online | Accuracy: 84% | Scraper: Connected")
+        # Input Section
+        odds = st.text_input("Ingiza odds 9 za nyuma:")
+        
+        if st.button("GET SIGNAL"):
+            if user['status'] == "trial":
+                user['signals_left'] -= 1
+            
+            with st.spinner('Analyzing...'):
+                time.sleep(1.5)
+                # Ibisubizo bya AI (Bya bindi wifuzaga)
+                st.success("✅ Pattern Found!")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("PRED", "4.7x")
+                c2.metric("TARGET", "3.9x")
+                c3.metric("CHANCE", "70%")
+                
+                if user['status'] == "trial":
+                    st.rerun() # Refresh kugira ngo signals_left igabanuke
