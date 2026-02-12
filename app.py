@@ -5,136 +5,139 @@ import time
 import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Aviator AI Neural v2", layout="wide")
+st.set_page_config(page_title="Aviator AI Pro Predictor", layout="wide")
 
-# --- 2. THE AI NEURAL BRAIN WITH TRACKING ---
-class AviatorAI:
+# --- 2. THE STEALTH ENGINE ---
+class AviatorEngine:
     def __init__(self):
-        # Memory y'imibare yose
         if 'memory' not in st.session_state:
             st.session_state['memory'] = [1.20, 2.50, 1.10, 4.00, 1.05]
-        # Memory y'uburyo AI yagiye i-predict-inga (Accuracy tracking)
-        if 'performance_log' not in st.session_state:
-            st.session_state['performance_log'] = [] # Izabika {"pred": x, "actual": y, "result": "WIN/LOSS"}
-        if 'last_prediction' not in st.session_state:
-            st.session_state['last_prediction'] = None
+        if 'logs' not in st.session_state:
+            st.session_state['logs'] = [] 
+        if 'current_prediction' not in st.session_state:
+            st.session_state['current_prediction'] = None
 
-    def update_performance(self, actual_odd):
-        """Isuzumwa niba prediction iheruka yaragezeho"""
-        last_pred = st.session_state['last_prediction']
+    def process_round(self, actual_odd):
+        # Isesengura niba inshuro ishize AI yari yatsinze
+        last_pred = st.session_state['current_prediction']
         if last_pred:
-            result = "✅ WIN" if actual_odd >= last_pred else "❌ LOSS"
-            st.session_state['performance_log'].append({
-                "Prediction": f"{last_pred}x",
-                "Actual": f"{actual_odd}x",
-                "Status": result
+            status = "WIN" if actual_odd >= last_pred else "LOSS"
+            color = "#45ad15" if status == "WIN" else "#ff4b4b"
+            st.session_state['logs'].insert(0, {
+                "Time": time.strftime('%H:%M:%S'),
+                "AI Prediction": f"{last_pred}x",
+                "Result": f"{actual_odd}x",
+                "Outcome": status
             })
-            # Gufata gusa 10 ziheruka mu mateka
-            if len(st.session_state['performance_log']) > 10:
-                st.session_state['performance_log'].pop(0)
         
-    def learn_and_predict(self):
-        history = st.session_state['memory']
-        last_3 = history[-3:]
-        avg = np.mean(last_3)
-        risk_score = np.random.uniform(0, 100)
-        
-        # 1. AI Check: Niba isanze umuvuduko utameze neza (Sorry mode)
-        if all(x < 1.3 for x in last_3) or risk_score < 25:
-            st.session_state['last_prediction'] = None
-            return None, risk_score
-        
-        # 2. Advanced calculation
-        if avg < 1.8:
-            pred = round(np.random.uniform(2.0, 4.0), 2)
-        else:
-            pred = round(np.random.uniform(1.3, 2.2), 2)
-            
-        st.session_state['last_prediction'] = pred
-        return pred, risk_score
+        # Kwibuka imibare mishya
+        st.session_state['memory'].append(actual_odd)
+        if len(st.session_state['memory']) > 15:
+            st.session_state['memory'].pop(0)
 
-# --- 3. UI DESIGN ---
+    def get_new_prediction(self):
+        history = st.session_state['memory']
+        avg = np.mean(history[-3:])
+        
+        # AI Logic: Reba niba umukino umeze nabi
+        if all(x < 1.3 for x in history[-2:]):
+            st.session_state['current_prediction'] = None
+            return None, "🚫 DO NOT BET (Wait for recovery)"
+        
+        # Gushaka Prediction nshya
+        pred = round(np.random.uniform(1.5, 3.5), 2) if avg < 2 else round(np.random.uniform(1.2, 2.0), 2)
+        st.session_state['current_prediction'] = pred
+        return pred, "✅ BET NOW (Safe Entry)"
+
+# --- 3. CUSTOM INTERFACE (Aviator Style) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: white; font-family: 'Orbitron', sans-serif; }
-    .ai-box {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 20px; border-radius: 15px; border: 1px solid #45ad15; text-align: center;
+    .stApp { background-color: #000000; color: white; }
+    .aviator-card {
+        background-color: #1a1a1a; padding: 25px; border-radius: 15px;
+        border: 1px solid #2c2c2c; text-align: center;
     }
-    .log-table { font-size: 12px; color: #ccc; }
+    .prediction-text { color: #ff4b4b; font-size: 65px; font-weight: bold; margin: 0; }
+    .advice-box { padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+    .win { color: #45ad15; font-weight: bold; }
+    .loss { color: #ff4b4b; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. ENGINE FRAGMENT ---
-@st.fragment(run_every=6) # 6 seconds refresh
-def neural_engine():
-    ai = AviatorAI()
+# --- 4. LIVE ENGINE FRAGMENT ---
+@st.fragment(run_every=6)
+def aviator_live_ui():
+    engine = AviatorEngine()
     
-    # Simulating the plane flight (Actual Odd)
+    # 1. Simulate Actual Round
     actual_odd = round(np.random.uniform(1.0, 5.0), 2)
+    engine.process_round(actual_odd)
     
-    # Update AI Performance before adding new odd to memory
-    ai.update_performance(actual_odd)
+    st.markdown("<h2 style='text-align: center; color: #ff4b4b;'>🚀 AVIATOR AI PREDICTOR</h2>", unsafe_allow_html=True)
     
-    # Add actual odd to memory
-    st.session_state['memory'].append(actual_odd)
-    if len(st.session_state['memory']) > 15: st.session_state['memory'].pop(0)
-
-    st.markdown("### 🧠 NEURAL PATTERN ENGINE v2")
+    # --- TOP ROW: HISTORY GRAPH ---
+    history = st.session_state['memory']
+    fig = go.Figure(go.Scatter(x=list(range(len(history))), y=history, 
+                               mode='lines+markers', line=dict(color='#ff4b4b', width=4),
+                               marker=dict(size=10, color='white')))
+    fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', font_color='white', height=200, 
+                      margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(visible=False))
+    st.plotly_chart(fig, use_container_width=True)
     
-    # MAIN LAYOUT
-    col_main, col_sidebar = st.columns([2.5, 1])
 
-    with col_main:
-        # GRAPH
-        history = st.session_state['memory']
-        fig = go.Figure(go.Scatter(x=list(range(len(history))), y=history, 
-                                   mode='lines+markers', line=dict(color='#45ad15', width=3)))
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                          font_color='white', height=250, margin=dict(l=0, r=0, t=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+    # --- MIDDLE ROW: PREDICTION & ADVICE ---
+    col1, col2 = st.columns(2)
+    prediction, advice = engine.get_new_prediction()
 
-        # AI DECISION
-        prediction, risk = ai.learn_and_predict()
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
-            if prediction is None:
-                st.error("⚠️ AI STATUS: SELF-CORRECTING")
-                st.write("Sorry, pattern is unstable. Skipping...")
-            else:
-                st.success("✅ AI STATUS: ANALYZING")
-                st.markdown(f"<h1>{prediction}x</h1>", unsafe_allow_html=True)
-                st.caption(f"Risk Level: {round(risk, 1)}%")
-            st.markdown("</div>", unsafe_allow_html=True)
-        
-        with c2:
-            st.write("#### 📡 Live Pattern Scan")
-            st.code(f"Scan_Target: {actual_odd}x\nMemory_Capacity: {len(history)}/15\nLogic_Speed: 0.002ms")
-
-    with col_sidebar:
-        st.write("#### 📜 AI Log History")
-        if st.session_state['performance_log']:
-            df = pd.DataFrame(st.session_state['performance_log'])
-            st.table(df.tail(5)) # Kwerekana 5 ziheruka
+    with col1:
+        st.markdown("<div class='aviator-card'>", unsafe_allow_html=True)
+        st.write("NEXT PREDICTION")
+        if prediction:
+            st.markdown(f"<p class='prediction-text'>{prediction}x</p>", unsafe_allow_html=True)
         else:
-            st.info("Waiting for first round...")
+            st.markdown(f"<p class='prediction-text' style='color:#555;'>WAIT</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 5. APP EXECUTION ---
+    with col2:
+        st.markdown("<div class='aviator-card' style='height: 100%;'>", unsafe_allow_html=True)
+        st.write("AI STRATEGY")
+        color = "#45ad15" if "BET NOW" in advice else "#555"
+        st.markdown(f"<div class='advice-box' style='background:{color};'>{advice}</div>", unsafe_allow_html=True)
+        st.write(f"Current Server Status: <span style='color:#45ad15;'>Active</span>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- BOTTOM ROW: WIN/LOSS LOGS ---
+    st.write("---")
+    st.write("### 📜 LIVE PERFORMANCE LOGS")
+    if st.session_state['logs']:
+        # Kwerekana logs mu buryo busomeka neza
+        for log in st.session_state['logs'][:5]: # Turebe 5 ziheruka
+            res_color = "win" if log['Outcome'] == "WIN" else "loss"
+            st.markdown(f"""
+                <div style="background:#111; padding:10px; border-radius:10px; margin-bottom:5px; border-left: 5px solid {'#45ad15' if log['Outcome']=='WIN' else '#ff4b4b'};">
+                    <span style="color:#888;">{log['Time']}</span> | 
+                    AI: <b>{log['AI Prediction']}</b> | 
+                    Actual: <b>{log['Result']}</b> | 
+                    Result: <span class='{res_color}'>{log['Outcome']}</span>
+                </div>
+            """, unsafe_allow_html=True)
+
+# --- 5. EXECUTION ---
 if 'user' not in st.session_state:
     st.session_state['user'] = None
 
 if st.session_state['user'] is None:
-    st.title("Aviator Neural Login")
-    u = st.text_input("Username")
+    st.title("Aviator AI Login")
+    u = st.text_input("Username").lower().strip()
     p = st.text_input("Password", type="password")
-    if st.button("AUTHENTICATE"):
+    if st.button("LOGIN"):
         st.session_state['user'] = u
         st.rerun()
 else:
     with st.sidebar:
-        st.write(f"Agent: **{st.session_state['user']}**")
-        st.sidebar.button("LOGOUT", on_click=lambda: st.session_state.update(user=None))
+        st.markdown(f"### Welcome Agent: <br><span style='color:#ff4b4b;'>{st.session_state['user']}</span>", unsafe_allow_html=True)
+        if st.button("Logout"):
+            st.session_state['user'] = None
+            st.rerun()
     
-    neural_engine()
+    aviator_live_ui()
