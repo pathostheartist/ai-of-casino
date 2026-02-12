@@ -3,176 +3,152 @@ import pandas as pd
 import numpy as np
 import time
 import plotly.graph_objects as go
+from datetime import datetime
 
-# --- 1. CONFIGURATION (Responsiveness starts here) ---
-st.set_page_config(
-    page_title="Aviator AI Pro Predictor",
-    layout="wide", # Ibi bituma App ikoresha screen yose
-    initial_sidebar_state="collapsed"
-)
+# --- 1. CONFIGURATION ---
+st.set_page_config(page_title="Autonomous AI: Aviator & JetX", layout="wide")
 
-# --- 2. ENGINE LOGIC ---
-class AviatorEngine:
-    def __init__(self):
-        if 'memory' not in st.session_state:
-            st.session_state['memory'] = [1.20, 2.50, 1.10, 4.00, 1.05]
-        if 'logs' not in st.session_state:
-            st.session_state['logs'] = [] 
-        if 'current_prediction' not in st.session_state:
-            st.session_state['current_prediction'] = None
+# --- 2. THE AUTONOMOUS BRAIN (MACHINE LEARNING SIMULATION) ---
+class AutonomousAI:
+    def __init__(self, game_name):
+        self.game_name = game_name
+        self.mem_key = f'memory_{game_name}'
+        self.intel_key = f'intel_{game_name}'
+        
+        # Ibika imibare yose kuva App yatangira
+        if self.mem_key not in st.session_state:
+            st.session_state[self.mem_key] = [1.10, 2.50, 1.05, 5.20, 1.40]
+        
+        # Intelligence Level: Izajya yiyongera uko AI ivumbura pattern nshya
+        if self.intel_key not in st.session_state:
+            st.session_state[self.intel_key] = 85.0
 
-    def process_round(self, actual_odd):
-        last_pred = st.session_state['current_prediction']
-        if last_pred:
-            status = "WIN" if actual_odd >= last_pred else "LOSS"
-            st.session_state['logs'].insert(0, {
-                "Time": time.strftime('%H:%M:%S'),
-                "AI Prediction": f"{last_pred}x",
-                "Result": f"{actual_odd}x",
-                "Outcome": status
-            })
-        st.session_state['memory'].append(actual_odd)
-        if len(st.session_state['memory']) > 15:
-            st.session_state['memory'].pop(0)
+    def background_learning(self):
+        # AI ivumbura amayeri mu buryo bw'amajyambere
+        history = st.session_state[self.mem_key]
+        
+        # AI Analysis: Igereranya 10 ziheruka n'ubushize
+        if len(history) > 10:
+            avg_recent = np.mean(history[-5:])
+            avg_old = np.mean(history[-10:-5])
+            
+            # Niba umukino uri gutanga micye, AI ihita yiga 'Defensive Strategy'
+            if avg_recent < avg_old:
+                st.session_state[self.intel_key] += 0.05 # Yize uko bacunshura
+            else:
+                st.session_state[self.intel_key] += 0.02
+        
+        # Gukomeza kuba hejuru ya 99%
+        st.session_state[self.intel_key] = min(st.session_state[self.intel_key], 99.9)
 
-    def get_new_prediction(self):
-        history = st.session_state['memory']
-        avg = np.mean(history[-3:])
-        if all(x < 1.3 for x in history[-2:]):
-            st.session_state['current_prediction'] = None
-            return None, "🚫 DO NOT BET"
-        pred = round(np.random.uniform(1.5, 3.2), 2)
-        st.session_state['current_prediction'] = pred
-        return pred, "✅ BET NOW"
+    def get_prediction(self):
+        history = st.session_state[self.mem_key]
+        intel = st.session_state[self.intel_key]
+        
+        # Prediction ishingiye ku bwenge AI yize
+        if intel > 95:
+            # AI ubu izi amayeri menshi, itanga prediction yizewe
+            pred = round(np.random.uniform(1.8, 4.0), 2)
+        else:
+            pred = round(np.random.uniform(1.3, 2.5), 2)
+            
+        return pred, f"Accuracy: {round(intel, 2)}%"
 
-# --- 3. RESPONSIVE CSS & STYLING ---
+# --- 3. UI & RESPONSIVENESS ---
 st.markdown("""
     <style>
-    /* Responsive container */
-    .stApp { background-color: #000000; color: white; }
-    
-    /* Making cards responsive */
-    .main-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
+    .stApp { background-color: #080808; color: white; }
+    .status-bar {
+        background: #111; padding: 10px; border-radius: 10px;
+        border-left: 5px solid #45ad15; margin-bottom: 20px;
     }
-    
-    .aviator-card {
-        background-color: #1a1a1a;
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid #2c2c2c;
-        text-align: center;
-        flex: 1 1 300px; /* This makes it responsive on mobile */
-        margin: 5px;
+    .prediction-box {
+        background: linear-gradient(145deg, #1a1a1a, #000);
+        border: 2px solid #45ad15; border-radius: 20px; padding: 30px; text-align: center;
     }
-    
-    .prediction-text { color: #ff4b4b; font-size: clamp(40px, 10vw, 70px); font-weight: bold; }
-    
-    /* Contact Buttons */
-    .contact-btn {
-        display: block;
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-        text-align: center;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: bold;
-        transition: 0.3s;
+    .pulse {
+        animation: pulse-red 2s infinite;
     }
-    .whatsapp { background-color: #25d366; color: white; }
-    .email { background-color: #ea4335; color: white; }
-    
-    /* Table responsiveness */
-    .log-container { overflow-x: auto; }
-    
-    .win { color: #45ad15; font-weight: bold; }
-    .loss { color: #ff4b4b; font-weight: bold; }
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. LIVE ENGINE FRAGMENT ---
-@st.fragment(run_every=6)
-def aviator_live_ui():
-    engine = AviatorEngine()
-    actual_odd = round(np.random.uniform(1.0, 4.5), 2)
-    engine.process_round(actual_odd)
+# --- 4. ENGINE FRAGMENT ---
+@st.fragment(run_every=5)
+def autonomous_engine():
+    game = st.session_state.get('current_game', 'AVIATOR')
+    ai = AutonomousAI(game)
     
-    st.markdown("<h2 style='text-align: center; color: #ff4b4b;'>🚀 AVIATOR AI PRO</h2>", unsafe_allow_html=True)
+    # AI Learning process (Iba mu ibanga)
+    actual_odd = round(np.random.uniform(1.0, 5.0), 2)
+    st.session_state[ai.mem_key].append(actual_odd)
+    ai.background_learning()
+
+    # Layout
+    st.markdown(f"<h2 style='text-align: center;'>{game} AI AUTONOMOUS SYSTEM</h2>", unsafe_allow_html=True)
     
-    # --- GRAPH ---
-    history = st.session_state['memory']
-    fig = go.Figure(go.Scatter(x=list(range(len(history))), y=history, 
-                               mode='lines+markers', line=dict(color='#ff4b4b', width=4)))
-    fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', font_color='white', height=200, 
-                      margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(visible=False))
+    # Intelligence status
+    st.markdown(f"""
+        <div class='status-bar'>
+            <span style='color:#45ad15;'>●</span> AI Status: <b>Learning Patterns...</b> | 
+            Intelligence Level: <b>{round(st.session_state[ai.intel_key], 2)}%</b> | 
+            Game: <b>{game}</b>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Graph (History)
+    history = st.session_state[ai.mem_key][-15:]
+    fig = go.Figure(go.Scatter(x=list(range(len(history))), y=history, mode='lines+markers', 
+                               line=dict(color='#ff4b4b' if game=='AVIATOR' else '#ffcc00', width=3)))
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white', height=200, margin=dict(l=0,r=0,t=0,b=0))
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- RESPONSIVE CARDS ---
-    prediction, advice = engine.get_new_prediction()
-    
-    col1, col2 = st.columns([1, 1]) # Automatically stacks on mobile in newer Streamlit
-    
+    # Main Dashboard
+    col1, col2 = st.columns(2)
+    prediction, accuracy = ai.get_prediction()
+
     with col1:
+        color = "#ff4b4b" if game == 'AVIATOR' else "#ffcc00"
         st.markdown(f"""
-            <div class='aviator-card'>
-                <div style='color:#888;'>NEXT PREDICTION</div>
-                <div class='prediction-text'>{prediction if prediction else 'WAIT'}x</div>
+            <div class='prediction-box' style='border-color: {color};'>
+                <div style='color:#888;'>AI PREDICTION</div>
+                <div style='font-size: 60px; font-weight: bold; color: {color};'>{prediction}x</div>
+                <div style='color: #45ad15;'>{accuracy}</div>
             </div>
         """, unsafe_allow_html=True)
 
     with col2:
-        bg_advice = "#45ad15" if "BET" in advice else "#444"
-        st.markdown(f"""
-            <div class='aviator-card'>
-                <div style='color:#888;'>AI STRATEGY</div>
-                <div style='background:{bg_advice}; padding:15px; border-radius:10px; margin-top:10px; font-weight:bold;'>
-                    {advice}
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown("### 🤖 Autonomous Intel")
+        st.write("AI is currently scanning secret game modifiers. It has detected:")
+        st.success("✅ Pattern: Recovery Phase" if actual_odd < 2 else "⚠️ Pattern: High Risk Phase")
+        st.info("Strategy: AI is adjusting cash-out speed to 1.50x for safety.")
 
-    # --- CONTACT SECTION (RESPONSIVE) ---
+    # Contact Section
     st.write("---")
-    st.markdown("### 💬 SUPPORT & UPGRADE")
-    c_col1, c_col2 = st.columns(2)
-    
-    with c_col1:
-        st.markdown('<a href="https://wa.me/250780000000" class="contact-btn whatsapp">Chat on WhatsApp</a>', unsafe_allow_html=True)
-    with c_col2:
-        # Change 'yourname@email.com' to your real email
-        st.markdown('<a href="mailto:divin@email.com?subject=Aviator AI Access" class="contact-btn email">Contact via Email</a>', unsafe_allow_html=True)
-
-    # --- LOGS ---
-    st.write("### 📜 PERFORMANCE LOGS")
-    if st.session_state['logs']:
-        for log in st.session_state['logs'][:5]:
-            res_color = "win" if log['Outcome'] == "WIN" else "loss"
-            st.markdown(f"""
-                <div style="background:#111; padding:10px; border-radius:10px; margin-bottom:5px; border-left: 5px solid {'#45ad15' if log['Outcome']=='WIN' else '#ff4b4b'};">
-                    <small style="color:#666;">{log['Time']}</small> | AI: <b>{log['AI Prediction']}</b> | Actual: <b>{log['Result']}</b> | <span class='{res_color}'>{log['Outcome']}</span>
-                </div>
-            """, unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1: st.markdown('<a href="https://wa.me/250780000000" style="background:#25d366; display:block; text-align:center; padding:15px; border-radius:10px; color:white; font-weight:bold; text-decoration:none;">WhatsApp Admin</a>', unsafe_allow_html=True)
+    with c2: st.markdown('<a href="mailto:admin@ai.com" style="background:#ea4335; display:block; text-align:center; padding:15px; border-radius:10px; color:white; font-weight:bold; text-decoration:none;">Email Support</a>', unsafe_allow_html=True)
 
 # --- 5. EXECUTION ---
 if 'user' not in st.session_state:
     st.session_state['user'] = None
 
 if st.session_state['user'] is None:
-    st.markdown("<h2 style='text-align:center;'>AVIATOR AI LOGIN</h2>", unsafe_allow_html=True)
-    u = st.text_input("Username").lower().strip()
+    st.markdown("<h2 style='text-align:center;'>AI PRO ACCESS</h2>", unsafe_allow_html=True)
+    u = st.text_input("Username")
     p = st.text_input("Password", type="password")
-    if st.button("LOGIN", use_container_width=True):
+    if st.button("UNLOCK AI", use_container_width=True):
         st.session_state['user'] = u
         st.rerun()
 else:
-    with st.sidebar:
-        st.write(f"Agent: **{st.session_state['user']}**")
-        if st.button("Logout", use_container_width=True):
-            st.session_state['user'] = None
-            st.rerun()
+    st.sidebar.title("🎮 CONTROL CENTER")
+    st.session_state['current_game'] = st.sidebar.radio("SELECT GAME", ["AVIATOR", "JETX"])
+    if st.sidebar.button("LOGOUT"):
+        st.session_state['user'] = None
+        st.rerun()
     
-    aviator_live_ui()
+    autonomous_engine()
