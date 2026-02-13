@@ -6,17 +6,18 @@ from datetime import datetime, timedelta
 import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Neural Master Control v8", layout="wide")
+st.set_page_config(page_title="Neural Master Control v9", layout="wide")
 
 # --- 2. DATABASE & CREDENTIALS ---
 if 'admin_creds' not in st.session_state:
     st.session_state['admin_creds'] = {"user": "admin", "pwd": "2026"}
 if 'user_db' not in st.session_state:
-    st.session_state['user_db'] = {}
+    # Tubanza gushyiramo admin muri DB kugira ngo agire access ihoraho
+    st.session_state['user_db'] = {"admin": datetime.now() + timedelta(days=365)}
 if 'auth_user' not in st.session_state:
     st.session_state['auth_user'] = None
 if 'next_day_key' not in st.session_state:
-    st.session_state['next_day_key'] = "1234" # Key y'abantu basanzwe
+    st.session_state['next_day_key'] = "1234" 
 if 'logs' not in st.session_state:
     st.session_state['logs'] = []
 if 'streak' not in st.session_state:
@@ -35,18 +36,24 @@ st.markdown("""
         display: block; width: 100%; padding: 12px; margin: 10px 0;
         border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center;
     }
-    .profile-card {
-        background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-top: 10px;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. AUTHENTICATION ---
-def check_user_expiry(user):
-    if user in st.session_state['user_db']:
-        if datetime.now() < st.session_state['user_db'][user]:
-            return True
-    return False
+# --- 4. AUTHENTICATION (KOSORA KWINJIRA KWA USER) ---
+def is_authorized(user, password):
+    # 1. Check niba ari Admin
+    if user == st.session_state['admin_creds']['user'] and password == st.session_state['admin_creds']['pwd']:
+        return "admin"
+    
+    # 2. Check niba ari User washyizwemo na Admin kandi akaba akoresheje Key nyayo
+    if user in st.session_state['user_db'] and password == st.session_state['next_day_key']:
+        expiry_date = st.session_state['user_db'][user]
+        if datetime.now() < expiry_date:
+            return "user"
+        else:
+            return "expired"
+            
+    return "invalid"
 
 if st.session_state['auth_user'] is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -57,19 +64,15 @@ if st.session_state['auth_user'] is None:
         pwd = st.text_input("Access Key", type="password")
         
         if st.button("LOGIN", use_container_width=True):
-            # Admin Login Check (Uses stored Admin Credentials)
-            if uid == st.session_state['admin_creds']['user'] and pwd == st.session_state['admin_creds']['pwd']:
-                st.session_state['auth_user'] = "admin"
+            result = is_authorized(uid, pwd)
+            
+            if result == "admin" or result == "user":
+                st.session_state['auth_user'] = uid
                 st.rerun()
-            # User Login Check (Uses Next Day Key)
-            elif uid != "" and pwd == st.session_state['next_day_key']:
-                if check_user_expiry(uid):
-                    st.session_state['auth_user'] = uid
-                    st.rerun()
-                else:
-                    st.error("User not authorized or Access Expired.")
+            elif result == "expired":
+                st.error("Access Expired. Contact Admin to re-pay.")
             else:
-                st.error("Invalid Username or Key.")
+                st.error("Invalid Username or Access Key.")
         
         st.markdown(f"""
             <a href="https://wa.me/250780000000" class="contact-btn" style="background: #25d366; color: white;">WhatsApp Admin</a>
@@ -78,34 +81,31 @@ if st.session_state['auth_user'] is None:
         st.markdown("</div>", unsafe_allow_html=True)
 
 else:
-    # --- SIDEBAR (ADMIN CONTROL) ---
+    # --- SIDEBAR (ADMIN CONTROL PANEL) ---
     with st.sidebar:
         st.title("🎛️ CONTROL PANEL")
         
-        if st.session_state['auth_user'] == "admin":
-            # 1. PROFILE SECTION
+        # Admin is the only one who can see these settings
+        if st.session_state['auth_user'] == st.session_state['admin_creds']['user']:
             with st.expander("👤 ADMIN PROFILE"):
-                st.markdown("<div class='profile-card'>", unsafe_allow_html=True)
-                new_admin_u = st.text_input("New Admin Username", value=st.session_state['admin_creds']['user'])
-                new_admin_p = st.text_input("New Admin Password", type="password")
-                if st.button("Update Credentials"):
-                    if new_admin_p:
-                        st.session_state['admin_creds']['user'] = new_admin_u
-                        st.session_state['admin_creds']['pwd'] = new_admin_p
-                        st.success("Credentials Updated!")
-                st.markdown("</div>", unsafe_allow_html=True)
-            
-            # 2. NEXT DAY KEY (FOR USERS ONLY)
+                new_admin_u = st.text_input("New Username", value=st.session_state['admin_creds']['user'])
+                new_admin_p = st.text_input("New Password", type="password")
+                if st.button("Update Profile"):
+                    st.session_state['admin_creds']['user'] = new_admin_u
+                    if new_admin_p: st.session_state['admin_creds']['pwd'] = new_admin_p
+                    st.success("Admin Profile Updated!")
+
             st.write("---")
-            st.session_state['next_day_key'] = st.text_input("Set Users' Next Day Key", value=st.session_state['next_day_key'])
+            st.session_state['next_day_key'] = st.text_input("Users' Key (Next Day)", value=st.session_state['next_day_key'])
             
-            # 3. USER MANAGEMENT
             st.subheader("Add User Access")
             new_u = st.text_input("User ID")
             days = st.number_input("Days", 1, 30, 1)
             if st.button("Authorize User"):
-                st.session_state['user_db'][new_u] = datetime.now() + timedelta(days=days)
-                st.success(f"User {new_u} Authorized!")
+                if new_u:
+                    st.session_state['user_db'][new_u] = datetime.now() + timedelta(days=days)
+                    st.success(f"User '{new_u}' added!")
+                else: st.error("Enter a Username!")
         
         st.write("---")
         game_choice = st.selectbox("GAME", ["AVIATOR", "JETX", "LUCKY JET"])
@@ -116,7 +116,7 @@ else:
     # --- 5. DASHBOARD (BETPAWA STYLE) ---
     @st.fragment(run_every=5)
     def live_dashboard():
-        if 'history' not in st.session_state: st.session_state['history'] = [1.1, 2.5, 1.0, 3.8]
+        if 'history' not in st.session_state: st.session_state['history'] = [1.3, 2.1, 1.0, 4.2]
         actual = round(np.random.uniform(1.0, 4.0), 2)
         st.session_state['history'].append(actual)
         if len(st.session_state['history']) > 15: st.session_state['history'].pop(0)
@@ -135,7 +135,6 @@ else:
         # Prediction Cards
         c1, c2 = st.columns(2)
         pred = round(np.random.uniform(1.6, 3.2), 2)
-        
         status = "WIN" if actual >= pred else "LOSS"
         if status == "WIN": st.session_state['streak'] += 1
         else: st.session_state['streak'] = 0
@@ -146,7 +145,7 @@ else:
         with c2:
             st.markdown(f"<div style='background:#111; padding:20px; border-radius:15px; border:2px solid #333; text-align:center;'><div style='color:#888;'>ACTUAL</div><h1 style='color:white; margin:0;'>{actual}x</h1><p style='color:#888; margin:0;'>LIVE FEED</p></div>", unsafe_allow_html=True)
 
-        # History Logs
+        # Performance History
         st.write("---")
         st.markdown("### 📊 PERFORMANCE HISTORY")
         for log in st.session_state['logs'][:5]:
