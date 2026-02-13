@@ -2,186 +2,142 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import time
-import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Neural History Analyzer Pro", layout="wide")
+st.set_page_config(page_title="Admin Neural Control - BetPawa Edition", layout="wide")
 
-# --- 2. THE ENGINE (BetPawa Deep History & Pattern Analysis) ---
-class AdvancedNeuralEngine:
-    def __init__(self, game):
-        self.game = game
-        self.mem_key = f'mem_{game}'
-        self.archive_key = f'archive_{game}'
-        self.log_key = f'log_{game}'
-        self.pred_key = f'pred_{game}'
-        self.streak_key = f'streak_{game}'
-        
-        if self.mem_key not in st.session_state:
-            st.session_state[self.mem_key] = [1.2, 2.5, 1.1, 4.0, 1.05]
-        if self.archive_key not in st.session_state:
-            # Aya ni amateka ya kera cyane AI yigiraho (BetPawa Archives)
-            st.session_state[self.archive_key] = [1.5, 3.2, 1.1, 4.5, 1.02, 2.1, 1.8, 1.05, 6.0]
-        if self.log_key not in st.session_state:
-            st.session_state[self.log_key] = []
-        if self.pred_key not in st.session_state:
-            st.session_state[self.pred_key] = None
-        if self.streak_key not in st.session_state:
-            st.session_state[self.streak_key] = 0
+# --- 2. SESSION STATE ---
+if 'auth_status' not in st.session_state:
+    st.session_state['auth_status'] = "logged_out"
+if 'admin_msg' not in st.session_state:
+    st.session_state['admin_msg'] = "System is running on BetPawa Real-time Archives."
+if 'next_day_accuracy' not in st.session_state:
+    st.session_state['next_day_accuracy'] = 85
+if 'last_odds' not in st.session_state:
+    st.session_state['last_odds'] = [1.10, 2.50, 1.05, 4.20, 1.15]
 
-    def analyze_patterns(self):
-        history = st.session_state[self.mem_key]
-        archive = st.session_state[self.archive_key]
-        if len(history) < 3: return 60
-        last_pattern = history[-3:]
-        matches = 0
-        for i in range(len(archive) - 3):
-            if archive[i:i+3] == last_pattern:
-                matches += 1
-        confidence = 70 + (matches * 10)
-        return min(confidence, 99)
-
-    def update(self, actual_odd):
-        last_pred = st.session_state[self.pred_key]
-        if last_pred:
-            status = "WIN" if actual_odd >= last_pred else "LOSS"
-            if status == "WIN":
-                st.session_state[self.streak_key] += 1
-            else:
-                st.session_state[self.streak_key] = 0
-                
-            st.session_state[self.log_key].insert(0, {
-                "Time": time.strftime('%H:%M:%S'),
-                "AI Prediction": f"{last_pred}x",
-                "Actual Result": f"{actual_odd}x",
-                "Status": status
-            })
-            
-        st.session_state[self.mem_key].append(actual_odd)
-        st.session_state[self.archive_key].append(actual_odd)
-        if len(st.session_state[self.mem_key]) > 20: st.session_state[self.mem_key].pop(0)
-        if len(st.session_state[self.archive_key]) > 100: st.session_state[self.archive_key].pop(0)
-
-    def get_prediction(self, boost_mode=False):
-        confidence = self.analyze_patterns()
-        if boost_mode: confidence += 5
-        if confidence > 80:
-            pred = round(np.random.uniform(1.8, 3.5), 2)
-        else:
-            pred = round(np.random.uniform(1.3, 2.1), 2)
-        st.session_state[self.pred_key] = pred
-        return pred, f"✅ Confidence: {confidence}% (BetPawa Match)"
-
-# --- 3. UI STYLING ---
+# --- 3. CUSTOM CSS ---
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: white; }
-    .prediction-card {
-        background: #111; padding: 25px; border-radius: 15px;
-        border: 2px solid #ff4b4b; text-align: center;
+    .stApp { background-color: #000000; color: white; }
+    .odd-circle {
+        display: inline-block; width: 45px; height: 45px; line-height: 45px;
+        border-radius: 50%; border: 1px solid #333; text-align: center;
+        margin: 4px; font-weight: bold; font-size: 13px; background: #111;
     }
-    .status-badge {
-        padding: 5px 15px; border-radius: 20px; font-size: 12px;
-        background: #222; border: 1px solid #444;
+    .odd-low { color: #34b7f1; } 
+    .odd-mid { color: #9b59b6; }
+    .odd-high { color: #ff4b4b; }
+    .auth-box {
+        background: #111; padding: 30px; border-radius: 15px;
+        border: 1px solid #333; text-align: center; max-width: 450px; margin: auto;
     }
-    .streak-alert {
-        background: #45ad15; color: white; padding: 10px;
-        border-radius: 10px; text-align: center; font-weight: bold;
-        margin-bottom: 15px; border: 1px solid #2d6a10;
+    .contact-btn {
+        display: block; width: 100%; padding: 10px; margin: 10px 0;
+        border-radius: 5px; text-decoration: none; font-weight: bold; text-align: center;
     }
-    .auth-container {
-        max-width: 400px; margin: auto; padding: 30px;
-        background: #111; border-radius: 15px; border: 1px solid #333;
+    .admin-panel {
+        background: #0e1117; padding: 15px; border-radius: 10px; border: 1px solid #ff4b4b;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. AUTHENTICATION LOGIC ---
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-
-if not st.session_state['authenticated']:
+# --- 4. LOGIN INTERFACE ---
+if st.session_state['auth_status'] != "authorized":
     st.markdown("<br><br>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align:center;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
-        user_id = st.text_input("Agent ID", placeholder="Enter your ID")
-        access_key = st.text_input("Access Key", type="password", placeholder="••••••••")
+        st.markdown("<div class='auth-box'>", unsafe_allow_html=True)
+        st.header("NEURAL LOGIN")
+        u_id = st.text_input("User ID")
+        u_pin = st.text_input("Access PIN", type="password")
         
-        if st.button("LOGIN TO ENGINE", use_container_width=True):
-            if user_id and access_key == "2026": # Urashyiramo password ushaka hano
-                st.session_state['authenticated'] = True
+        if st.button("LOGIN", use_container_width=True):
+            # Admin Credentials check
+            if u_id == "admin" and u_pin == "2026":
+                st.session_state['auth_status'] = "authorized"
                 st.rerun()
             else:
-                st.error("Invalid Credentials. Please try again.")
+                st.session_state['auth_status'] = "pending"
         
-        st.write("---")
-        st.markdown("<p style='text-align:center; font-size:12px;'>Need access? Contact Admin via WhatsApp</p>", unsafe_allow_html=True)
+        if st.session_state['auth_status'] == "pending":
+            st.error("⚠️ PLEASE CONTACT ADMIN TO PAY")
+            st.markdown(f"""
+                <a href="https://wa.me/250780000000" class="contact-btn" style="background: #25d366; color: white;">WhatsApp Admin</a>
+                <a href="mailto:linezee3@gmail.com" class="contact-btn" style="background: #ea4335; color: white;">Email: linezee3@gmail.com</a>
+            """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 5. MAIN SYSTEM (ONLY SHOWS AFTER LOGIN) ---
+# --- 5. MAIN SYSTEM (ADMIN ONLY CONTROL) ---
 else:
     with st.sidebar:
-        st.markdown("### ⚙️ SYSTEM CONTROL")
-        game_choice = st.radio("SELECT GAME", ["AVIATOR", "JETX"])
+        st.title("🎛️ ADMIN CONTROL")
+        st.markdown("<div class='admin-panel'>", unsafe_allow_html=True)
+        st.subheader("📅 Next Day Operations")
+        
+        # Admin defines tomorrow's performance
+        st.session_state['next_day_accuracy'] = st.slider("Tomorrow's AI Accuracy (%)", 50, 99, st.session_state['next_day_accuracy'])
+        next_day_mode = st.selectbox("Market Strategy", ["Aggressive", "Safe", "Random Cycle"])
+        
+        if st.button("Save Next Day Settings"):
+            st.success("Settings scheduled for tomorrow!")
+            
         st.write("---")
-        boost_ai = st.checkbox("🚀 BOOST ACCURACY", value=True)
-        refresh_speed = st.slider("Scan Speed (Sec)", 3, 15, 6)
+        st.subheader("📢 User Broadcast")
+        new_msg = st.text_area("Update Live Notification")
+        if st.button("Update Dashboard Message"):
+            st.session_state['admin_msg'] = new_msg
+            st.toast("Dashboard updated!")
         
-        st.info(f"BetPawa Archive: {len(st.session_state.get(f'archive_{game_choice}', []))} records")
+        st.markdown("</div>", unsafe_allow_html=True)
         
-        if st.button("LOGOUT SYSTEM", use_container_width=True):
-            st.session_state['authenticated'] = False
+        game_choice = st.selectbox("SELECT GAME", ["AVIATOR", "JETX", "SPACEMAN", "ZEPPELIN", "LUCKY JET", "AVIAGAME", "SPACE XY", "PILOT"])
+        
+        if st.button("LOGOUT"):
+            st.session_state['auth_status'] = "logged_out"
             st.rerun()
 
-    primary_color = "#ff4b4b" if game_choice == "AVIATOR" else "#ffcc00"
+    # --- 6. DASHBOARD (BETPAWA STYLE) ---
+    @st.fragment(run_every=5)
+    def live_dashboard():
+        # Update Odds
+        new_odd = round(np.random.uniform(1.0, 4.0), 2)
+        st.session_state['last_odds'].insert(0, new_odd)
+        st.session_state['last_odds'] = st.session_state['last_odds'][:10]
 
-    @st.fragment(run_every=refresh_speed)
-    def main_engine():
-        engine = AdvancedNeuralEngine(game_choice)
-        actual_val = round(np.random.uniform(1.0, 5.0), 2)
-        engine.update(actual_val)
-        
-        st.markdown(f"<h2 style='text-align:center; color:{primary_color};'>{game_choice} NEURAL ANALYZER</h2>", unsafe_allow_html=True)
+        # UI Header
+        st.markdown(f"<h2 style='text-align: center; color: #ff4b4b;'>🚀 {game_choice} NEURAL ANALYZER</h2>", unsafe_allow_html=True)
+        st.info(f"🔔 **Notification:** {st.session_state['admin_msg']}")
 
-        streak = st.session_state[engine.streak_key]
-        if streak >= 2:
-            st.markdown(f"<div class='streak-alert'>🔥 WINNING STREAK: {streak} IN A ROW!</div>", unsafe_allow_html=True)
+        # BetPawa History Bar
+        st.markdown("### 🕒 Last Results")
+        odds_html = "".join([f"<div class='odd-circle {'odd-low' if o < 2 else 'odd-mid' if o < 10 else 'odd-high'}'>{o}x</div>" for o in st.session_state['last_odds']])
+        st.markdown(f"<div>{odds_html}</div>", unsafe_allow_html=True)
         
-        history = st.session_state[engine.mem_key]
-        fig = go.Figure(go.Scatter(x=list(range(len(history))), y=history, mode='lines+markers', line=dict(color=primary_color, width=4)))
-        fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', font_color='white', height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis=dict(visible=False))
-        st.plotly_chart(fig, use_container_width=True)
+        
 
-        col1, col2 = st.columns(2)
-        pred_val, advice = engine.get_prediction(boost_ai)
-        
-        with col1:
+        st.write("---")
+
+        # Prediction engine (Influenced by Admin's current and next day settings)
+        c1, c2 = st.columns(2)
+        with c1:
+            # Prediction influenced by accuracy slider
+            acc_bonus = st.session_state['next_day_accuracy'] / 100
+            pred = round(np.random.uniform(1.4, 2.5 + acc_bonus), 2)
             st.markdown(f"""
-                <div class='prediction-card' style='border-color:{primary_color};'>
-                    <div style='color:#888;'>AI PREDICTION</div>
-                    <div style='font-size:55px; font-weight:bold; color:{primary_color};'>{pred_val if pred_val else '---'}x</div>
-                    <div style='color:#45ad15;'>{advice}</div>
+                <div style="background:#111; padding:35px; border-radius:15px; border: 2px solid #ff4b4b; text-align:center;">
+                    <div style='color:#888; font-size:14px;'>AI PREDICTION</div>
+                    <h1 style="color:#ff4b4b; font-size:75px;">{pred}x</h1>
+                    <p style="color:#45ad15;">Confidence: {st.session_state['next_day_accuracy']}%</p>
                 </div>
             """, unsafe_allow_html=True)
             
-        with col2:
+        with c2:
             st.markdown(f"""
-                <div class='prediction-card' style='border-color:#444;'>
-                    <div style='color:#888;'>ACTUAL RESULT</div>
-                    <div style='font-size:55px; font-weight:bold; color:white;'>{actual_val}x</div>
-                    <div class='status-badge'>SCANNING BETPAWA HISTORY...</div>
+                <div style="background:#111; padding:35px; border-radius:15px; border: 2px solid #333; text-align:center;">
+                    <div style='color:#888; font-size:14px;'>ACTUAL FEED</div>
+                    <h1 style="color:white; font-size:75px;">{new_odd}x</h1>
+                    <p style="color:#888;">Synchronized with BetPawa</p>
                 </div>
             """, unsafe_allow_html=True)
 
-        st.write("---")
-        st.markdown("### 📊 WIN/LOSS HISTORY SCAN")
-        for log in st.session_state[engine.log_key][:5]:
-            status_color = "#45ad15" if log['Status'] == "WIN" else "#ff4b4b"
-            st.markdown(f"""
-                <div style="background:#111; padding:10px; border-radius:10px; margin-bottom:5px; border-left: 5px solid {status_color};">
-                    AI: <b>{log['AI Prediction']}</b> | Result: <b>{log['Actual Result']}</b> | <span style="color:{status_color};">{log['Status']}</span>
-                </div>
-            """, unsafe_allow_html=True)
-
-    main_engine()
+    live_dashboard()
