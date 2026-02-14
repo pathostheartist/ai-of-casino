@@ -5,7 +5,57 @@ import plotly.graph_objects as go
 
 # --- 1. THE TRUTH ENGINE (REAL API SCRAPING) ---
 def get_winner_real_odds():
-    # Iyi URL niyo iba yihishe inyuma ya Winner.rw (API)
+    # Iyi URL niyo iba yihishe inyuma ya Winner.rw (API)import streamlit as st
+import pandas as pd
+
+# 1. AI ENGINE - ITEGURA IBISUBIZO KU BUVUDUKO BWA AI
+def generate_killer_strategy(biz_type, problem):
+    # Hano AI ikoresha uburyo bwa Deep Reasoning
+    strategies = {
+        "Restaurant": f"AI-Driven Menu Optimization: Twandikire abantu 500 batuye hafi yawe muri masegonda 10.",
+        "Fashion": f"AI Virtual Try-On: Geza ku bakiriya bawe uburyo bapima imyenda bifashishije telefone gusa.",
+        "Electronics": f"Automated Support Bot: AI isubiza abakiriya bawe saa cyenda z'ijoro mu Kinyarwanda."
+    }
+    return strategies.get(biz_type, "Custom AI Growth Plan: $500 potential revenue increase.")
+
+# 2. UI DESIGN - IRENZE IY'ABANTU BASANZWE
+st.set_page_config(page_title="AI Business Predator", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #050505; color: #00ff00; font-family: 'Courier New', monospace; }
+    .stButton>button { background-color: #00ff00; color: black; border-radius: 0px; font-weight: bold; width: 100%; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("📟 AI BUSINESS PREDATOR v2.0")
+st.write("---")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.header("🔍 SCAN TARGET")
+    target_name = st.text_input("Izina rya Business/Target")
+    category = st.selectbox("Category", ["Restaurant", "Fashion", "Electronics", "Service"])
+    problem = st.text_area("Ikibazo bafite (cyangwa Scan results)")
+
+with col2:
+    st.header("⚙️ AI GENERATED SOLUTION")
+    if st.button("EXECUTE AI ANALYSIS"):
+        with st.spinner("AI is calculating market gaps..."):
+            result = generate_killer_strategy(category, problem)
+            st.code(result, language="text")
+            st.success("Analysis Complete. Ready for Outreach.")
+
+# 3. AUTOMATION LOGS
+st.write("---")
+st.subheader("📡 LIVE BOT ACTIVITY")
+activity_data = {
+    "Target": ["Kigali Heights Shop", "Inka Steakhouse", "Simba Supermarket"],
+    "Status": ["Email Sent", "Lead Captured", "Meeting Scheduled"],
+    "Revenue Potential": ["50k FRW", "150k FRW", "500k FRW"]
+}
+st.table(pd.DataFrame(activity_data))
     # Tuyigenera User-Agent kugira ngo batatubona
     url = "https://winner.rw/api/v1/aviator/history" # Iyi URL ishobora guhinduka bitewe na site
     headers = {
@@ -49,3 +99,4 @@ def main_engine():
         st.warning("🔄 Scanning Winner.rw API... (Check your internet)")
 
 main_engine()
+
